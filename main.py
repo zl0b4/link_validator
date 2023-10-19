@@ -54,7 +54,7 @@ def get_links(url):
         urls = list(filter(lambda u: u and len(u) >= 2 and '/' in u, urls))
         for i, link in enumerate(urls):
             if '://' not in link:
-                urls[i] = 'https://www.magtu.ru/' + link
+                urls[i] = ('https://www.magtu.ru/' + link).replace('www.magtu.ru//', 'www.magtu.ru/')
         urls = set(filter(lambda u: 'magtu.ru' in u, urls))
         return urls
     except bs4.builder.ParserRejectedMarkup:
@@ -128,6 +128,7 @@ def validate_links(urls):
         #  print(link)
         r = get_request(link)
         if r is None:
+            result.write(f"{link} can't connect!\n")
             print(f"{link} can't connect!")
             continue
 
@@ -138,12 +139,18 @@ def validate_links(urls):
         # time.sleep(1)
     return not_validated
 
-result = open('result.txt', 'w')
+start_time = time.time()
+
+result = open('result.txt', 'a')
 
 link = 'https://www.magtu.ru/'
 
 get(link)
 
+result.write("--- %s seconds ---" % (time.time() - start_time))
+
 result.close()
+print(all_urls)
 #validate_links(["http://magtu.ru/weblinks?task=weblink.go&id=48"])
+print("--- %s seconds ---" % (time.time() - start_time))
 print()
