@@ -6,14 +6,13 @@ from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-
-
 all_urls = {}
 ready = set()
+empty_links = []
 
 
 def get_request(url):
-    '''
+    """
     Возвращает результат запроса к URL веб-страницы.
     Если не удается открыть web-страницу из-за исключения requests.exceptions.ConnectionError,
     то возвращает None
@@ -23,7 +22,7 @@ def get_request(url):
 
             Returns:
                     reqs (session): web-страница
-        '''
+        """
     try:
         session = requests.Session()
         retry = Retry(connect=3, backoff_factor=0.5)
@@ -35,23 +34,30 @@ def get_request(url):
     except requests.exceptions.ConnectionError:
         print(f"Exception with URL: {url}")
 
+
 def get_links(url):
-    '''
-    Возвращает множества всех ссылок с web-страницы.
+    """
+    Возвращает множество всех ссылок с web-страницы.
 
             Parameters:
                     url (str): url web-страницы
 
             Returns:
                     urls (set): Множество, состоящее из всех ссылок, находящихся на web-странице
-    '''
+    """
     reqs = get_request(url)
     if reqs is None:
         return set()
     try:
         soup = BeautifulSoup(reqs.text, 'html.parser')
         urls = [link.get('href') for link in soup.find_all('a')]
+
+        if 'www.magtu.ru/oop' in url:
+            if len(urls) == 1:
+                print(f"EMPTY FOLDER: {url}")
+
         urls = list(filter(lambda u: u and len(u) >= 2 and '/' in u, urls))
+
         for i, link in enumerate(urls):
             if '://' not in link:
                 urls[i] = ('https://www.magtu.ru/' + link).replace('www.magtu.ru//', 'www.magtu.ru/')
@@ -62,16 +68,17 @@ def get_links(url):
 
 
 def get_links_from_magtu_link(url):
-    '''
-    Возвращает множества всех ссылок с web-страницы МГТУ. Выполняется проверка,
-    является ли данная web-страница
+    """
+    Возвращает множество всех ссылок с web-страницы МГТУ. Выполняется проверка,
+    является ли данная web-страница страницей magtu.ru, далее берутся только те ссылки,
+    которых еще нет в all_urls
 
             Parameters:
                     url (str): url web-страницы МГТУ
 
             Returns:
                     urls (set): Множество, состоящее из всех ссылок, находящихся на web-странице
-        '''
+        """
 
     # проверка, что это web-страница сайта МГТУ
     if 'magtu.ru' not in url:
@@ -83,7 +90,7 @@ def get_links_from_magtu_link(url):
 
 
 def get(url):
-    '''
+    """
     Рекурсивная функция.
     Дополняет словарь all_urls всеми полученными URL со всех вложенных web-страниц данной
 
@@ -92,12 +99,12 @@ def get(url):
 
             Returns:
                     None
-        '''
+        """
     global all_urls
     if url not in ready:
-        print(f"URL: {url}")
+        print(f"URL: {url}\nNOT VALIDATED:")
         result.write(f"URL: {url}\n")
-        urls = get_links_from_magtu_link(url)
+        urls = get_links_from_magtu_link(url) | {url}
         not_validated = validate_links(urls)
         if not_validated:
             print(f"Not validated on {url}:")
@@ -133,17 +140,18 @@ def validate_links(urls):
             continue
 
         if r.status_code == 404:
-            print(f"{link} is not validated")
+            print(f"{link}")
             not_validated.append(link)
 
         # time.sleep(1)
     return not_validated
 
+
 start_time = time.time()
 
 result = open('result.txt', 'a')
 
-link = 'https://www.magtu.ru/'
+link = "https://www.magtu.ru/sveden/education/eduop.html"
 
 get(link)
 
@@ -151,6 +159,6 @@ result.write("--- %s seconds ---" % (time.time() - start_time))
 
 result.close()
 print(all_urls)
-#validate_links(["http://magtu.ru/weblinks?task=weblink.go&id=48"])
+# validate_links(["http://magtu.ru/weblinks?task=weblink.go&id=48"])
 print("--- %s seconds ---" % (time.time() - start_time))
 print()
